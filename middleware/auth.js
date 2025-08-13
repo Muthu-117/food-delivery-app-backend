@@ -147,27 +147,52 @@ const checkOwnership = (resourceModel, resourceIdParam = 'id') => {
 };
 
 // Rate limiting for authentication endpoints
-const authRateLimit = (req, res, next) => {
-  // This would typically use Redis or similar for production
-  // For now, we'll use a simple in-memory store
-  const attempts = req.session?.loginAttempts || 0;
-  const lastAttempt = req.session?.lastLoginAttempt || 0;
-  const now = Date.now();
+// const authRateLimit = (req, res, next) => {
+//   // This would typically use Redis or similar for production
+//   // For now, we'll use a simple in-memory store
+//   const attempts = req.session?.loginAttempts || 0;
+//   const lastAttempt = req.session?.lastLoginAttempt || 0;
+//   const now = Date.now();
 
-  // Reset attempts after 15 minutes
-  if (now - lastAttempt > 15 * 60 * 1000) {
-    req.session.loginAttempts = 0;
+//   // Reset attempts after 15 minutes
+//   if (now - lastAttempt > 15 * 60 * 1000) {
+//     req.session.loginAttempts = 0;
+//   }
+
+//   if (attempts >= 5) {
+//     return res.status(429).json({
+//       success: false,
+//       message: 'Too many login attempts. Please try again in 15 minutes.'
+//     });
+//   }
+
+//   next();
+// };
+
+const loginAttempts = {};
+
+const authRateLimit = (req, res, next) => {
+  const ip = req.ip;
+  const now = Date.now();
+  const record = loginAttempts[ip] || { attempts: 0, lastAttempt: 0 };
+
+  // Reset after 15 minutes
+  if (now - record.lastAttempt > 15 * 60 * 1000) {
+    record.attempts = 0;
   }
 
-  if (attempts >= 5) {
+  // Block if too many attempts
+  if (record.attempts >= 5) {
     return res.status(429).json({
       success: false,
       message: 'Too many login attempts. Please try again in 15 minutes.'
     });
   }
 
+  loginAttempts[ip] = record;
   next();
 };
+
 
 // Middleware to track login attempts
 const trackLoginAttempt = (req, res, next) => {
