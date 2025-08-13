@@ -14,6 +14,9 @@ const app = express();
 // Security middleware
 app.use(helmet());
 
+// Trust Render reverse proxy
+app.set('trust proxy', 1);
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW) * 60 * 1000, // 15 minutes
